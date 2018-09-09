@@ -99,7 +99,7 @@ tests.test_optimize(optimize)
 
 
 def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image,
-             correct_label, keep_prob, learning_rate):
+             correct_label, keep_prob, learning_rate, save=False):
     """
     Train neural network and print out the loss during training.
     :param sess: TF Session
@@ -114,7 +114,6 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param learning_rate: TF Placeholder for learning rate
     """
     # TODO: Implement function
-    saver = tf.train.Saver()
 
     init = tf.global_variables_initializer()
     sess.run(init)
@@ -133,10 +132,12 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
             _, loss = sess.run([train_op, cross_entropy_loss], feed_dict=feed)
             epoch_loss += loss
         
-        # Save model per epoch
         print('Epoch', epoch, 'completed out of', epochs,'loss:', epoch_loss)
-        save_path = saver.save(sess, "/tmp/model-%d.ckpt" % epoch)
-        print('Model saved at:', save_path)
+        # Save model per epoch
+        #if save:
+            # save = tf.train.Saver()
+       	#    save_path = saver.save(sess, "/tmp/model-%d.ckpt" % epoch)
+        #    print('Model saved at:', save_path)
 
 tests.test_train_nn(train_nn)
 
@@ -148,17 +149,22 @@ def run():
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
 
-    epochs = 18
-    batch_size=16
+    epochs = 15
+    batch_size=5
 
     # Download pretrained vgg model
     helper.maybe_download_pretrained_vgg(data_dir)
+
+    # Config to turn on JIT compilation
+    config = tf.ConfigProto()
+    config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
+    config.gpu_options.allocator_type = 'BFC'
 
     # OPTIONAL: Train and Inference on the cityscapes dataset instead of the Kitti dataset.
     # You'll need a GPU with at least 10 teraFLOPS to train on.
     #  https://www.cityscapes-dataset.com/
 
-    with tf.Session() as sess:
+    with tf.Session(config=config) as sess:
         # Path to vgg model
         vgg_path = os.path.join(data_dir, 'vgg')
         # Create function to get batches
@@ -180,7 +186,7 @@ def run():
              correct_label, keep_prob, learning_rate)
 
         # Save inference data using helper.save_inference_samples
-        # helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
+        helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
 
         # OPTIONAL: Apply the trained model to a video
 
